@@ -18,7 +18,7 @@ from keras_adversarial.image_grid_callback import ImageGridCallback
 from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D
 from keras_adversarial import AdversarialModel, fix_names, n_choice
 from keras_adversarial import AdversarialOptimizerSimultaneous, normal_latent_sampling
-from celeba_utils import cceleba_data
+from celeba_utils import celeba_data
 from keras.layers import LeakyReLU, Activation
 from image_utils import dim_ordering_unfix, dim_ordering_shape
 from scipy import ndimage, misc
@@ -91,7 +91,7 @@ def model_discriminator(latent_dim, output_dim=1, units=256, reg=lambda: l1l2(1e
     return Model(z, y)
 
 
-def aae_celeba(inputpath, n_imgs, outputpath, adversarial_optimizer):
+def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
     # z \in R^100
     latent_dim = 256
     units = 512

@@ -10,16 +10,16 @@ def celeba_process(x):
 #x_train, x_test: uint8 array of RGB image data with shape (num_samples, 3, 32, 32).
 
 def celeba_data(imageDirectory, n):
-    xtrain=io.imread(os.listdir(imageDirectory)[0])
+    xtrain=io.imread(imageDirectory+os.listdir(imageDirectory)[0])
     xtrain=np.expand_dims(xtrain, axis=0)
     for file in os.listdir(imageDirectory)[1:3]:
-        img=np.expand_dims(io.imread(file), axis=0) #(1,32,32,3)
+        img=np.expand_dims(io.imread(imageDirectory+file), axis=0) #(1,32,32,3)
         xtrain=np.concatenate((xtrain,img), axis=0)
 
-    xtest=io.imread(os.listdir(imageDirectory)[n])
+    xtest=io.imread(imageDirectory+os.listdir(imageDirectory)[n])
     xtest=np.expand_dims(xtrain, axis=0)
     for file in os.listdir(imageDirectory)[n+1:n/5]:
-        img=np.expand_dims(io.imread(file), axis=0) #(1,32,32,3)
+        img=np.expand_dims(io.imread(imageDirectory+file), axis=0) #(1,32,32,3)
         xtest=np.concatenate((xtest,img), axis=0)
 
     return celeba_process(xtrain), celeba_process(xtest)
