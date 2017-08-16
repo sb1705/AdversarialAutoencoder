@@ -163,6 +163,8 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
         print "Caricamento celeba : SUCCESSO"
     else:
         print "Caricamento celeba : FALLIMENTO"
+        print "n_imgs e' "+str(n_imgs)
+        print "shape e' "+ str(xtrain.shape)
         return
     y = [xtrain, np.ones((n, 1)), np.zeros((n, 1)), xtrain, np.zeros((n, 1)), np.ones((n, 1))]
     ntest = xtest.shape[0]
