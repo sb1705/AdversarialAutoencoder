@@ -1,0 +1,25 @@
+import numpy as np
+import os
+from skimage import io
+
+def celeba_process(x):
+    x = x.astype(np.float32) / 255.0
+    return x
+
+#returns n images for training and n/5 images for testing
+#x_train, x_test: uint8 array of RGB image data with shape (num_samples, 3, 32, 32).
+
+def celeba_data(imageDirectory, n):
+    xtrain=io.imread(os.listdir(imageDirectory)[0])
+    xtrain=np.expand_dims(xtrain, axis=0)
+    for file in os.listdir(imageDirectory)[1:3]:
+        img=np.expand_dims(io.imread(file), axis=0) #(1,32,32,3)
+        xtrain=np.concatenate((xtrain,img), axis=0)
+
+    xtest=io.imread(os.listdir(imageDirectory)[n])
+    xtest=np.expand_dims(xtrain, axis=0)
+    for file in os.listdir(imageDirectory)[n+1:n/5]:
+        img=np.expand_dims(io.imread(file), axis=0) #(1,32,32,3)
+        xtest=np.concatenate((xtest,img), axis=0)
+
+    return celeba_process(xtrain), celeba_process(xtest)
