@@ -17,11 +17,8 @@ def celeba_data(imageDirectory, n):
         imageDirectory=imageDirectory+ "/resized" + str(32) + "/"
         xtrain=io.imread(imageDirectory+os.listdir(imageDirectory)[0])
     xtrain=np.expand_dims(xtrain, axis=0)
-    print "xtrain shape e'"
-    print xtrain.shape
     for file in os.listdir(imageDirectory)[1:n]:
         img=np.expand_dims(io.imread(imageDirectory+file), axis=0) #(1,32,32,3)
-        print "img shape e' " + str(img.shape)
         xtrain=np.concatenate((xtrain,img), axis=0)
 
     xtest=io.imread(imageDirectory+os.listdir(imageDirectory)[n])
