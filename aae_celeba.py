@@ -1,3 +1,5 @@
+#syntax python aae_celeba.py datasetpath nimages
+
 import matplotlib as mpl
 
 # This line allows mpl to run with no DISPLAY defined
@@ -29,22 +31,29 @@ def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7
     h = 5
     model.add(Dense(units * 4 * 4, input_dim=latent_dim, W_regularizer=reg()))
     model.add(Reshape(dim_ordering_shape((units, 4, 4))))
-    # model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
+
     model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
-    # model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
+
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
-    # model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
+
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 4, h, h, border_mode='same', W_regularizer=reg()))
-    # model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
+
+    #livello aggiunto da me
+    model.add(UpSampling2D(size=(2, 2)))
+    model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
+    model.add(LeakyReLU(0.2))
+    #fine aggiunto da me
+
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(3, h, h, border_mode='same', W_regularizer=reg()))
     model.add(Activation('sigmoid'))
+
     return model
 
 
@@ -52,6 +61,7 @@ def model_encoder(latent_dim, input_shape, units=512, reg=lambda: l1l2(l1=1e-7, 
     k = 5
     x = Input(input_shape)
     h = Convolution2D(units / 4, k, k, border_mode='same', W_regularizer=reg())(x)
+    print("tutto ok")
     # h = SpatialDropout2D(dropout)(h)
     h = MaxPooling2D(pool_size=(2, 2))(h)
     h = LeakyReLU(0.2)(h)
@@ -92,17 +102,18 @@ def model_discriminator(latent_dim, output_dim=1, units=256, reg=lambda: l1l2(1e
 
 
 def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
-    # z \in R^100
+    # z \in R^256
     latent_dim = 256
     units = 512
-    # x \in R^{28x28}
-    input_shape = dim_ordering_shape((3, 32, 32))
+    # x \in R^{3x64x64}
+    img_size = 64
+    input_shape = dim_ordering_shape((3, img_size, img_size))
 
     # generator (z -> x)
     generator = model_generator(latent_dim, units=units)
     # encoder (x ->z)
     encoder = model_encoder(latent_dim, input_shape, units=units)
-    # autoencoder (x -> x')
+    # autoencoder (x -> x') --> unisce encoder e generator
     autoencoder = Model(encoder.inputs, generator(encoder(encoder.inputs)))
     # discriminator (z -> y)
     discriminator = model_discriminator(latent_dim, units=units)
@@ -117,10 +128,18 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
     aae = Model(x, fix_names([xpred, yfake, yreal], ["xpred", "yfake", "yreal"]))
 
     # print summary of models
-    generator.summary()
-    encoder.summary()
-    discriminator.summary()
+    print("AUTOENCODER : ENCODER + GENERATOR")
     autoencoder.summary()
+
+    print("ENCODER")
+    encoder.summary()
+
+    print("GENERATOR")
+    generator.summary()
+
+    print("DISCRIMINATOR")
+    discriminator.summary()
+
 
     # build adversarial model
     generative_params = generator.trainable_weights + encoder.trainable_weights
@@ -134,12 +153,14 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
                               compile_kwargs={"loss_weights": {"yfake": 1e-1, "yreal": 1e-1, "xpred": 1e2}})
 
     # load celeba data
-    xtrain, xtest = celeba_data(inputpath, n_imgs)
+
+    xtrain, xtest = celeba_data(inputpath, n_imgs, img_size)
+
 
     # callback for image grid of generated samples
     def generator_sampler():
         zsamples = np.random.normal(size=(10 * 10, latent_dim))
-        return dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, 32, 32, 3))
+        return dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, img_size, img_size, 3))
 
     generator_cb = ImageGridCallback(os.path.join(path, "generated-epoch-{:03d}.png"), generator_sampler)
 
@@ -147,8 +168,8 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
     def autoencoder_sampler():
         xsamples = n_choice(xtest, 10)
         xrep = np.repeat(xsamples, 9, axis=0)
-        xgen = dim_ordering_unfix(autoencoder.predict(xrep)).reshape((10, 9, 3, 32, 32))
-        xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, 3, 32, 32))
+        xgen = dim_ordering_unfix(autoencoder.predict(xrep)).reshape((10, 9, 3, img_size, img_size))
+        xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, 3, img_size, img_size))
         samples = np.concatenate((xsamples, xgen), axis=1)
         samples = samples.transpose((0, 1, 3, 4, 2))
         return samples
@@ -160,15 +181,16 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
     # generator, discriminator; pred, yfake, yreal
     n = xtrain.shape[0]
     if(n_imgs == n):
-        print "Caricamento celeba : SUCCESSO"
+        print "Dataset loading : Success"
     else:
-        print "Caricamento celeba : FALLIMENTO"
-        print "n_imgs e' "+str(n_imgs)
-        print "shape e' "+ str(xtrain.shape)
+        print "Dataset loading : Failure"
+        # print "n_imgs e' "+str(n_imgs)
+        # print "shape e' "+ str(xtrain.shape)
         return
     y = [xtrain, np.ones((n, 1)), np.zeros((n, 1)), xtrain, np.zeros((n, 1)), np.ones((n, 1))]
     ntest = xtest.shape[0]
     ytest = [xtest, np.ones((ntest, 1)), np.zeros((ntest, 1)), xtest, np.zeros((ntest, 1)), np.ones((ntest, 1))]
+
     history = fit(model, x=xtrain, y=y, validation_data=(xtest, ytest),
                   callbacks=[generator_cb, autoencoder_cb],
                   nb_epoch=100, batch_size=32)
