@@ -7,15 +7,15 @@ from PIL import Image
 def resize(directory, fileName, size):
     filePath = os.path.join(directory, fileName)
     im = Image.open(filePath)
+    dirName = directory + "/resized" + str(size) + "/"
+    if not os.path.exists(dirName):
+        os.makedirs(dirName) 
+    im.save(dirName + fileName[:-3]+"png")   
     w, h  = im.size
 
-    newIm = im.resize((int(size),int(size)))
-    dirName = directory + "/resized" + str(size) + "/"
+    newIm = im.resize((int(size),int(size)), resample=Image.LANCZOS)
 
-    if not os.path.exists(dirName):
-        os.makedirs(dirName)
-
-    newIm.save(dirName + fileName)
+    newIm.save(dirName + fileName[:-3]+"png")
 
 
 def bulkResize(imageDirectory, size):

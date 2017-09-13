@@ -193,7 +193,7 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
 
     history = fit(model, x=xtrain, y=y, validation_data=(xtest, ytest),
                   callbacks=[generator_cb, autoencoder_cb],
-                  nb_epoch=100, batch_size=32)
+                  nb_epoch=500, batch_size=64)
 
     # save history
     df = pd.DataFrame(history.history)
@@ -210,7 +210,7 @@ def main():
         print("Specify dataset's path and how many images you want to use for training")
         return
     else:
-        aae_celeba(sys.argv[1], int(sys.argv[2]), "output/aae-celeba", AdversarialOptimizerSimultaneous())
+        aae_celeba(sys.argv[1], int(sys.argv[2]), "output/NOTTEaae-celeba64-"+str(sys.argv[2])+"img-"+str(500)+"ep-"+str(64)+"batchsize", AdversarialOptimizerSimultaneous())
 
 
 if __name__ == "__main__":
