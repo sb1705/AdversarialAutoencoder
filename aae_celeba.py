@@ -32,28 +32,22 @@ def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7
     model.add(Dense(units * 4 * 4, input_dim=latent_dim, W_regularizer=reg()))
     model.add(Reshape(dim_ordering_shape((units, 4, 4))))
     model.add(LeakyReLU(0.2))
-
     model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
     model.add(LeakyReLU(0.2))
-
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
     model.add(LeakyReLU(0.2))
-
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 4, h, h, border_mode='same', W_regularizer=reg()))
     model.add(LeakyReLU(0.2))
-
     #livello aggiunto da me
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
     model.add(LeakyReLU(0.2))
     #fine aggiunto da me
-
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(3, h, h, border_mode='same', W_regularizer=reg()))
     model.add(Activation('sigmoid'))
-
     return model
 
 
@@ -166,10 +160,11 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
 
     # callback for image grid of autoencoded samples
     def autoencoder_sampler():
-        xsamples = n_choice(xtest, 10)
-        xrep = np.repeat(xsamples, 9, axis=0)
+        xsamples = n_choice(xtest, 10) #(10,64,64,3)
+        xrep = np.repeat(xsamples, 9, axis=0)#(90,64,64,3)
+        #LAVORARE QUI
         xgen = dim_ordering_unfix(autoencoder.predict(xrep)).reshape((10, 9, 3, img_size, img_size))
-        xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, 3, img_size, img_size))
+        xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, 3, img_size, img_size))#(10,1,3,64,64)
         samples = np.concatenate((xsamples, xgen), axis=1)
         samples = samples.transpose((0, 1, 3, 4, 2))
         return samples
