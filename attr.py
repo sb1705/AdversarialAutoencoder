@@ -53,6 +53,7 @@ def add_attributes(data_path, model_path, attr_path):
 
     #encode imgs
     z = (encoder.predict(imgs[:n_imgs]))
+    print "zshape: "+ str(z.shape)
 
     #indexes of selected attributes
     attr_indxs = [attribute_names.index(attr) for attr in selected_attributes]
@@ -65,28 +66,35 @@ def add_attributes(data_path, model_path, attr_path):
         vec = (np.mean(z[on_mask[:n_imgs]], dtype=float) -
                np.mean(z[off_mask[:n_imgs]], dtype=float))
         attr_vecs.append(vec)
+    print "attr_vecs lenght :"
+    print len(attr_vecs)
 
     # print imgs with attributes
     xsamples = imgs[:10] #(10,64,64,3)
-    print "xsamples.shape :"
-    print  xsamples.shape
-    xrep = np.repeat(xsamples, 9, axis=0)#(90,64,64,3)
-    print "xrep.shape :"
-    print xrep.shape
-    for i in range(1, 10):
-        xrep[i] += attr_vecs[i-1] #primi 9 attributi
-    xenc = encoder.predict(xrep)
-    print ("xenc shape:")
-    print xenc.shape
-    xgen = dim_ordering_unfix(generator.predict(xenc)).transpose((0, 2, 3, 1))
-    print "xgen shape :"
-    print xgen.shape
-    xgen = xgen.reshape((10, 9, img_size, img_size, 3))
-    xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, img_size, img_size, 3))#(10,1,64,64,3)
+    original_z = z[:10]
+    new_z = np.repeat(original_z, 9, axis=0)
+    
+    for i in range(0, 9):
+        new_z[i] += attr_vecs[i] #primi 9 attributi
+        
+    # xrep = np.repeat(xsamples, 9, axis=0)#(90,64,64,3)
+    # print "xrep.shape :"
+    # print xrep.shape
+    # for i in range(1, 10):
+    #     xrep[i] += attr_vecs[i-1] #primi 9 attributi
+    
+    # original_x = generator.predict(original_z)
+    new_x = generator.predict(new_z)
+    print "new_x shape  :"
+    print new_x.shape
+    xgen = dim_ordering_unfix(new_x).transpose((0, 2, 3, 1)).reshape((10, 9, 3, img_size, img_size))
+    xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, 3, img_size, img_size))#(10,1,64,64,3)
     samples = np.concatenate((xsamples, xgen), axis=1)
+    samples = samples.transpose((0, 1, 3, 4, 2))
     print "samples.shape :"
     print samples.shape
     write_image_grid(os.path.join(model_path, "attr.png"), samples, cmap=None)
+    
 
 def main():
     if(len(sys.argv)<4):
