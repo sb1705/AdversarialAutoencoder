@@ -5,18 +5,18 @@ from image_utils import dim_ordering_unfix
 # returns a list with all attribute names & a list of array with at i-th position
 # the attribute vector corrisponding at the i-th image.
 def list_attr(attr_path):
-all_attributes = []
-with open(attr_path, 'r') as f:
-    f.readline()
-    attribute_names = f.readline().strip().split(' ')#lista dei nomi
-    for i, line in enumerate(f):
-        fields = line.strip().replace('  ', ' ').split(' ')
-        img_name = fields[0]
-        if int(img_name[:6]) != i + 1:
-            raise ValueError('Parse error.')
-        attr_vec = np.array(map(int, fields[1:]))
-        all_attributes.append(attr_vec)
-return(attribute_names, all_attributes)
+    all_attributes = []
+    with open(attr_path, 'r') as f:
+        f.readline()
+        attribute_names = f.readline().strip().split(' ')#lista dei nomi
+        for i, line in enumerate(f):
+            fields = line.strip().replace('  ', ' ').split(' ')
+            img_name = fields[0]
+            if int(img_name[:6]) != i + 1:
+                raise ValueError('Parse error.')
+            attr_vec = np.array(map(int, fields[1:]))
+            all_attributes.append(attr_vec)
+    return(attribute_names, all_attributes)
 
 def load_models(path):
     encoder.save(os.path.join(path, "encoder.h5"))
