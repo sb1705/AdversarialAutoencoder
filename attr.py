@@ -74,8 +74,8 @@ def add_attributes(data_path, model_path, attr_path):
     original_z = z[:10]
     new_z = np.repeat(original_z, 9, axis=0)
     
-    for i in range(0, 9):
-        new_z[i] += attr_vecs[i] #primi 9 attributi
+    for i in range(0, new_z.shape[0]):
+        new_z[i] += attr_vecs[i%9] #primi 9 attributi
         
     # xrep = np.repeat(xsamples, 9, axis=0)#(90,64,64,3)
     # print "xrep.shape :"
