@@ -22,7 +22,7 @@ import click
 @click.argument('n_imgs', default=500)
 def train(output_path, shape, latent_width, color_channels, batch,
           epoch, image_path, n_imgs):
-    '''Train'''
+    '''Train an adversarial autoencoder on images'''
     if not os.path.exists(os.path.dirname(image_path)):
         click.echo("Image path doesn't exist.")
         return
@@ -33,11 +33,21 @@ def train(output_path, shape, latent_width, color_channels, batch,
     else:
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
-
+  
     file = open('summary.txt','w')
-    file.write('dataset: ' + image_path)
-    file.write('number of images: '+str(n_imgs))
+    file.write('dataset: ' + image_path+'\n')
+    file.write('number of images: '+str(n_imgs)+'\n')
+    file.write('output path: '+str(output_path)+'\n')
+    file.write('image shape: ('
+                              +      str(shape)
+                              +',' + str(shape)
+                              +',' + str(color_channels)
+                              +')\n')
+    file.write('width of latent space: '+str(n_imgs)+'\n')
+    file.write('number of epochs: ' + str(epochs)+'\n')
+    file.write('batch size: ' + str(batch)+'\n')
     file.close()
+
 
     AAE(str(output_path), int(shape), int(latent_width), int(color_channels), int(batch),
         int(epoch), str(image_path), int(n_imgs), AdversarialOptimizerSimultaneous())
