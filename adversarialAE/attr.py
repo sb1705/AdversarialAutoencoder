@@ -4,10 +4,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #for tensorflow to work properly
 import numpy as np
 from keras.models import load_model
 from keras_adversarial.image_grid import write_image_grid
-from celeba_utils import celeba_data
 from scipy import ndimage, misc
-from image_utils import dim_ordering_unfix
 from keras_adversarial import AdversarialOptimizerSimultaneous
+
+from utils.data_utils import retrieve_data
+from utils.image_utils import dim_ordering_unfix
+
 # returns a list with all attribute names & a list of array with at i-th position
 # the attribute vector corrisponding at the i-th image.
 def list_attr(attr_path):
@@ -34,7 +36,7 @@ def add_attributes(data_path, model_path, attr_path):
     latent_dim = 256
     n_imgs = 200
     img_size=64
-    imgs, imgs2 = celeba_data(data_path, n_imgs, 64, attr=1)
+    imgs, imgs2 = retrieve_data(data_path, n_imgs, 64, attr=1)
 
     #load attributes
     attribute_names=[]
@@ -73,16 +75,16 @@ def add_attributes(data_path, model_path, attr_path):
     xsamples = imgs[:10] #(10,64,64,3)
     original_z = z[:10]
     new_z = np.repeat(original_z, 9, axis=0)
-    
+
     for i in range(0, new_z.shape[0]):
         new_z[i] += attr_vecs[i%9] #primi 9 attributi
-        
+
     # xrep = np.repeat(xsamples, 9, axis=0)#(90,64,64,3)
     # print "xrep.shape :"
     # print xrep.shape
     # for i in range(1, 10):
     #     xrep[i] += attr_vecs[i-1] #primi 9 attributi
-    
+
     # original_x = generator.predict(original_z)
     new_x = generator.predict(new_z)
     print "new_x shape  :"
@@ -94,7 +96,7 @@ def add_attributes(data_path, model_path, attr_path):
     print "samples.shape :"
     print samples.shape
     write_image_grid(os.path.join(model_path, "attr.png"), samples, cmap=None)
-    
+
 
 def main():
     if(len(sys.argv)<4):

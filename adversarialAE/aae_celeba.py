@@ -1,7 +1,4 @@
-#syntax python aae_celeba.py datasetpath nimages
-
 import matplotlib as mpl
-
 # This line allows mpl to run with no DISPLAY defined
 mpl.use('Agg')
 import sys
@@ -20,11 +17,12 @@ from keras_adversarial.image_grid_callback import ImageGridCallback
 from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D
 from keras_adversarial import AdversarialModel, fix_names, n_choice
 from keras_adversarial import AdversarialOptimizerSimultaneous, normal_latent_sampling
-from celeba_utils import celeba_data
 from keras.layers import LeakyReLU, Activation
-from image_utils import dim_ordering_unfix, dim_ordering_shape
 from scipy import ndimage, misc
 
+from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
+from utils.data_utils import retrieve_data
+#from .nets import model_encoder, model_generator, model_generator
 
 def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7)):
     model = Sequential(name="decoder")
@@ -94,14 +92,16 @@ def model_discriminator(latent_dim, output_dim=1, units=256, reg=lambda: l1l2(1e
     y = Dense(output_dim, name="discriminator_y", activation="sigmoid", W_regularizer=reg())(h)
     return Model(z, y)
 
-
-def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
+def AAE(output_path, shape, latent_width, color_channels, batch,
+        epoch, image_path, n_imgs, adversarial_optimizer):
+#def AAE(image_path, n_imgs, output_path, adversarial_optimizer):
     # z \in R^256
-    latent_dim = 256
-    units = 512
+    latent_dim  = latent_width
+    units       = 512
     # x \in R^{3x64x64}
-    img_size = 64
-    input_shape = dim_ordering_shape((3, img_size, img_size))
+    img_size    = shape
+    n_col       = color_channels
+    input_shape = dim_ordering_shape((n_col, img_size, img_size))
 
     # generator (z -> x)
     generator = model_generator(latent_dim, units=units)
@@ -146,9 +146,9 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
                                     "xpred": "mean_squared_error"},
                               compile_kwargs={"loss_weights": {"yfake": 1e-1, "yreal": 1e-1, "xpred": 1e2}})
 
-    # load celeba data
+    # load data
 
-    xtrain, xtest = celeba_data(inputpath, n_imgs, img_size)
+    xtrain, xtest = retrieve_data(image_path, n_imgs, img_size)
 
 
     # callback for image grid of generated samples
@@ -156,7 +156,7 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
         zsamples = np.random.normal(size=(10 * 10, latent_dim))
         return dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, img_size, img_size, 3))
 
-    generator_cb = ImageGridCallback(os.path.join(path, "generated-epoch-{:03d}.png"), generator_sampler)
+    generator_cb = ImageGridCallback(os.path.join(output_path, "generated-epoch-{:03d}.png"), generator_sampler)
 
     # callback for image grid of autoencoded samples
     def autoencoder_sampler():
@@ -169,7 +169,7 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
         samples = samples.transpose((0, 1, 3, 4, 2))
         return samples
 
-    autoencoder_cb = ImageGridCallback(os.path.join(path, "autoencoded-epoch-{:03d}.png"), autoencoder_sampler,
+    autoencoder_cb = ImageGridCallback(os.path.join(output_path, "autoencoded-epoch-{:03d}.png"), autoencoder_sampler,
                                        cmap=None)
 
     # train network
@@ -188,25 +188,25 @@ def aae_celeba(inputpath, n_imgs, path, adversarial_optimizer):
 
     history = fit(model, x=xtrain, y=y, validation_data=(xtest, ytest),
                   callbacks=[generator_cb, autoencoder_cb],
-                  nb_epoch=500, batch_size=64)
+                  nb_epoch=200, batch_size=64)
 
     # save history
     df = pd.DataFrame(history.history)
-    df.to_csv(os.path.join(path, "history.csv"))
+    df.to_csv(os.path.join(output_path, "history.csv"))
 
     # save model
-    encoder.save(os.path.join(path, "encoder.h5"))
-    generator.save(os.path.join(path, "generator.h5"))
-    discriminator.save(os.path.join(path, "discriminator.h5"))
+    encoder.save(os.path.join(output_path, "encoder.h5"))
+    generator.save(os.path.join(output_path, "generator.h5"))
+    discriminator.save(os.path.join(output_path, "discriminator.h5"))
 
 
-def main():
-    if(len(sys.argv)<3):
-        print("Specify dataset's path and how many images you want to use for training")
-        return
-    else:
-        aae_celeba(sys.argv[1], int(sys.argv[2]), "output/NOTTEaae-celeba64-"+str(sys.argv[2])+"img-"+str(500)+"ep-"+str(64)+"batchsize", AdversarialOptimizerSimultaneous())
-
-
-if __name__ == "__main__":
-    main()
+# def main():
+#     if(len(sys.argv)<3):
+#         print("Specify dataset's path and how many images you want to use for training")
+#         return
+#     else:
+#         aae(sys.argv[1], int(sys.argv[2]), "output/aae"+str(sys.argv[2])+"img-"+str(500)+"ep-"+str(64)+"batchsize")
+#
+#
+# if __name__ == "__main__":
+#     main()

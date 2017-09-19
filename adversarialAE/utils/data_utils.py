@@ -3,13 +3,13 @@ import os
 from skimage import io
 from resize_imgs import bulkResize
 
-def celeba_process(x):
+def data_process(x):
     x = x.astype(np.float32) / 255.0
     return x
 
 #returns n images for training and n/5 images for testing
 #x_train, x_test: uint8 array of RGB image data with shape (num_samples, 3, size, size).
-def celeba_data(imageDirectory, n, size, attr=0):
+def retrieve_data(imageDirectory, n, size, attr=0):
     xtrain=io.imread(imageDirectory+sorted(os.listdir(imageDirectory))[0])
     xtest=np.array([0,0])
     if xtrain.shape[0]!=size:
@@ -33,4 +33,4 @@ def celeba_data(imageDirectory, n, size, attr=0):
             img=np.expand_dims(io.imread(imageDirectory+file), axis=0) #(1,size,size,3)
             xtest=np.concatenate((xtest,img), axis=0)#(n/5,size,size,3)
 
-    return celeba_process(xtrain), celeba_process(xtest)
+    return data_process(xtrain), data_process(xtest)
