@@ -25,7 +25,7 @@ from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
 from utils.data_utils import retrieve_data
 #from .nets import model_encoder, model_generator, model_generator
 
-def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=0):
+def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=False):
     model = Sequential(name="decoder")
     h = 5
     model.add(Dense(units * 4 * 4, input_dim=latent_dim, W_regularizer=reg()))
@@ -42,7 +42,7 @@ def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 4, h, h, border_mode='same', W_regularizer=reg()))
     model.add(LeakyReLU(0.2))
-    if(dim_32):
+    if not (dim_32):
         model.add(UpSampling2D(size=(2, 2)))
         model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
         model.add(LeakyReLU(0.2))
@@ -106,7 +106,7 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     input_shape = dim_ordering_shape((n_col, img_size, img_size))
 
     # generator (z -> x)
-    generator = model_generator(latent_dim, units=units, dim_32=int(img_size==32))
+    generator = model_generator(latent_dim, units=units, dim_32=(img_size==32))
     # encoder (x ->z)
     encoder = model_encoder(latent_dim, input_shape, units=units)
     # autoencoder (x -> x') --> unisce encoder e generator
@@ -141,7 +141,7 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     generative_params = generator.trainable_weights + encoder.trainable_weights
     model = AdversarialModel(base_model=aae,
                              player_params=[generative_params, discriminator.trainable_weights],
-                             player_names=["generator", "discriminator"])
+                             player_names=["A", "D"])
     model.adversarial_compile(adversarial_optimizer=adversarial_optimizer,
                               player_optimizers=[Adam(3e-4, decay=1e-4), Adam(1e-3, decay=1e-4)],
                               loss={"yfake": "binary_crossentropy", "yreal": "binary_crossentropy",
