@@ -8,7 +8,7 @@ import click
 @click.option('--output-path', default='', type=click.Path(resolve_path=False,
                                               file_okay=False, dir_okay=True))
 @click.option('--shape', default=64, type = int,
-              help='shape = image width = image_height. For example with shape=32 the images used for training will be (32, 32, number_of_colors)')
+              help='shape = image width = image_height. The possible value are 32 and 64. For example with shape=32 the images used for training will be (32, 32, number_of_colors)')
 @click.option('--latent-width', default=256, type=int,
               help="Width of the latent space.")
 @click.option('--color-channels', default=3, type=int,
@@ -23,13 +23,16 @@ import click
 def train(output_path, shape, latent_width, color_channels, batch,
           epoch, image_path, n_imgs):
     '''Train an adversarial autoencoder on images'''
+    if not ((shape==32)or(shape==64))
+	print "Images' shape must be 32 or 64"
+	return 
     if not os.path.exists(os.path.dirname(image_path)):
         click.echo("Image path doesn't exist.")
         return
     if not image_path[-1] == '/':
         image_path += '/'
     if output_path=='':
-        output_path='/output/'+strftime("%Y-%m-%d_%H:%M", gmtime())
+        output_path='./output/'+strftime("%Y-%m-%d_%H:%M", gmtime())
     else:
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
@@ -44,7 +47,7 @@ def train(output_path, shape, latent_width, color_channels, batch,
                               +',' + str(color_channels)
                               +')\n')
     file.write('width of latent space: '+str(n_imgs)+'\n')
-    file.write('number of epochs: ' + str(epochs)+'\n')
+    file.write('number of epochs: ' + str(epoch)+'\n')
     file.write('batch size: ' + str(batch)+'\n')
     file.close()
 

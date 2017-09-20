@@ -14,7 +14,8 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 from keras_adversarial.image_grid_callback import ImageGridCallback
-from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D
+from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D, BatchNormalization
+from keras.layers.core import SpatialDropout2D
 from keras_adversarial import AdversarialModel, fix_names, n_choice
 from keras_adversarial import AdversarialOptimizerSimultaneous, normal_latent_sampling
 from keras.layers import LeakyReLU, Activation
@@ -24,25 +25,27 @@ from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
 from utils.data_utils import retrieve_data
 #from .nets import model_encoder, model_generator, model_generator
 
-def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7)):
+def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=0):
     model = Sequential(name="decoder")
     h = 5
     model.add(Dense(units * 4 * 4, input_dim=latent_dim, W_regularizer=reg()))
     model.add(Reshape(dim_ordering_shape((units, 4, 4))))
+#    model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
     model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
+#    model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
+#    model.add(SpatialDropout2D(dropout))
     model.add(LeakyReLU(0.2))
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(units / 4, h, h, border_mode='same', W_regularizer=reg()))
     model.add(LeakyReLU(0.2))
-    #livello aggiunto da me
-    model.add(UpSampling2D(size=(2, 2)))
-    model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
-    model.add(LeakyReLU(0.2))
-    #fine aggiunto da me
+    if(dim_32):
+        model.add(UpSampling2D(size=(2, 2)))
+        model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
+        model.add(LeakyReLU(0.2))
     model.add(UpSampling2D(size=(2, 2)))
     model.add(Convolution2D(3, h, h, border_mode='same', W_regularizer=reg()))
     model.add(Activation('sigmoid'))
@@ -53,20 +56,19 @@ def model_encoder(latent_dim, input_shape, units=512, reg=lambda: l1l2(l1=1e-7, 
     k = 5
     x = Input(input_shape)
     h = Convolution2D(units / 4, k, k, border_mode='same', W_regularizer=reg())(x)
-    print("tutto ok")
-    # h = SpatialDropout2D(dropout)(h)
+#    h = SpatialDropout2D(dropout)(h)
     h = MaxPooling2D(pool_size=(2, 2))(h)
     h = LeakyReLU(0.2)(h)
     h = Convolution2D(units / 2, k, k, border_mode='same', W_regularizer=reg())(h)
-    # h = SpatialDropout2D(dropout)(h)
+#    h = SpatialDropout2D(dropout)(h)
     h = MaxPooling2D(pool_size=(2, 2))(h)
     h = LeakyReLU(0.2)(h)
     h = Convolution2D(units / 2, k, k, border_mode='same', W_regularizer=reg())(h)
-    # h = SpatialDropout2D(dropout)(h)
+#    h = SpatialDropout2D(dropout)(h)
     h = MaxPooling2D(pool_size=(2, 2))(h)
     h = LeakyReLU(0.2)(h)
     h = Convolution2D(units, k, k, border_mode='same', W_regularizer=reg())(h)
-    # h = SpatialDropout2D(dropout)(h)
+#    h = SpatialDropout2D(dropout)(h)
     h = LeakyReLU(0.2)(h)
     h = Flatten()(h)
     mu = Dense(latent_dim, name="encoder_mu", W_regularizer=reg())(h)
@@ -81,13 +83,13 @@ def model_discriminator(latent_dim, output_dim=1, units=256, reg=lambda: l1l2(1e
     h = z
     mode = 1
     h = Dense(units, name="discriminator_h1", W_regularizer=reg())(h)
-    # h = BatchNormalization(mode=mode)(h)
+#    h = BatchNormalization(mode=mode)(h)
     h = LeakyReLU(0.2)(h)
     h = Dense(units / 2, name="discriminator_h2", W_regularizer=reg())(h)
-    # h = BatchNormalization(mode=mode)(h)
+#    h = BatchNormalization(mode=mode)(h)
     h = LeakyReLU(0.2)(h)
     h = Dense(units / 2, name="discriminator_h3", W_regularizer=reg())(h)
-    # h = BatchNormalization(mode=mode)(h)
+#    h = BatchNormalization(mode=mode)(h)
     h = LeakyReLU(0.2)(h)
     y = Dense(output_dim, name="discriminator_y", activation="sigmoid", W_regularizer=reg())(h)
     return Model(z, y)
@@ -104,7 +106,7 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     input_shape = dim_ordering_shape((n_col, img_size, img_size))
 
     # generator (z -> x)
-    generator = model_generator(latent_dim, units=units)
+    generator = model_generator(latent_dim, units=units, dim_32=int(img_size==32))
     # encoder (x ->z)
     encoder = model_encoder(latent_dim, input_shape, units=units)
     # autoencoder (x -> x') --> unisce encoder e generator
@@ -188,7 +190,7 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
 
     history = fit(model, x=xtrain, y=y, validation_data=(xtest, ytest),
                   callbacks=[generator_cb, autoencoder_cb],
-                  nb_epoch=200, batch_size=64)
+                  nb_epoch=epoch, batch_size=batch)
 
     # save history
     df = pd.DataFrame(history.history)

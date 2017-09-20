@@ -1,7 +1,0 @@
-keras
-numpy
-click>=5.0
-matplotlib
-tensorflow
-pandas
-scipy
