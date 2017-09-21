@@ -1,1 +1,0 @@
-dataset: /home/sara/Documents/Tesi/celeba/img_align_celeba/number of images: 500
