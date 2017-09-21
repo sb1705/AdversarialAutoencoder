@@ -81,7 +81,7 @@ def model_encoder(latent_dim, input_shape, units=512, reg=lambda: l1l2(l1=1e-7, 
 def model_discriminator(latent_dim, output_dim=1, units=256, reg=lambda: l1l2(1e-7, 1e-7)):
     z = Input((latent_dim,))
     h = z
-    mode = 1
+#    mode = 1
     h = Dense(units, name="discriminator_h1", W_regularizer=reg())(h)
 #    h = BatchNormalization(mode=mode)(h)
     h = LeakyReLU(0.2)(h)

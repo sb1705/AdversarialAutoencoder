@@ -22,7 +22,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'adversarial_ae = adversarialAE.cli_tool:train'
+            'adversarial_ae = adversarialAE.cli_tool:initcli'
         ],
     },
 )
