@@ -24,8 +24,11 @@ from scipy import ndimage, misc
 from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
 from utils.data_utils import retrieve_data
 #from .nets import model_encoder, model_generator, model_generator
+import sklearn
+from sklearn import datasets
 
-def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=False):
+
+def model_generator(latent_dim, n_cols=3, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=False):
     model = Sequential(name="decoder")
     h = 5
     model.add(Dense(units * 4 * 4, input_dim=latent_dim, W_regularizer=reg()))
@@ -47,7 +50,7 @@ def model_generator(latent_dim, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7
         model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
         model.add(LeakyReLU(0.2))
     model.add(UpSampling2D(size=(2, 2)))
-    model.add(Convolution2D(3, h, h, border_mode='same', W_regularizer=reg()))
+    model.add(Convolution2D(n_cols, h, h, border_mode='same', W_regularizer=reg()))
     model.add(Activation('sigmoid'))
     return model
 
@@ -104,9 +107,10 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     img_size    = shape
     n_col       = color_channels
     input_shape = dim_ordering_shape((n_col, img_size, img_size))
-
+    print("input shape:")
+    print input_shape
     # generator (z -> x)
-    generator = model_generator(latent_dim, units=units, dim_32=(img_size==32))
+    generator = model_generator(latent_dim, n_col, units=units, dim_32=(img_size==32))
     # encoder (x ->z)
     encoder = model_encoder(latent_dim, input_shape, units=units)
     # autoencoder (x -> x') --> unisce encoder e generator
@@ -150,13 +154,20 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
 
     # load data
 
-    xtrain, xtest = retrieve_data(image_path, n_imgs, img_size)
-
+    #xtrain, xtest = retrieve_data(image_path, n_imgs, img_size)
+    data=sklearn.datasets.fetch_olivetti_faces(data_home=None, shuffle=False, random_state=0, download_if_missing=True)
+    data=data['images']
+    data=np.expand_dims(data, axis=3)
+    xtrain=data[:300]
+    xtest=data[300:]
 
     # callback for image grid of generated samples
     def generator_sampler():
         zsamples = np.random.normal(size=(10 * 10, latent_dim))
-        return dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, img_size, img_size, 3))
+        generated=dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, img_size, img_size, n_col))
+	if(n_col==1):
+	    generated=np.squeeze(generated, axis=4)
+	return generated
 
     generator_cb = ImageGridCallback(os.path.join(output_path, "generated-epoch-{:03d}.png"), generator_sampler)
 
@@ -164,26 +175,31 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     def autoencoder_sampler():
         xsamples = n_choice(xtest, 10) #(10,64,64,3)
         xrep = np.repeat(xsamples, 9, axis=0)#(90,64,64,3)
-        #LAVORARE QUI
-        xgen = dim_ordering_unfix(autoencoder.predict(xrep)).reshape((10, 9, 3, img_size, img_size))
-        xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, 3, img_size, img_size))#(10,1,3,64,64)
+        xgen = dim_ordering_unfix(autoencoder.predict(xrep)).reshape((10, 9, n_col, img_size, img_size))
+        xsamples = dim_ordering_unfix(xsamples).reshape((10, 1, n_col, img_size, img_size))#(10,1,3,64,64)
         samples = np.concatenate((xsamples, xgen), axis=1)
         samples = samples.transpose((0, 1, 3, 4, 2))
+	if(n_col==1):
+            samples=np.squeeze(samples, axis=4)
         return samples
 
-    autoencoder_cb = ImageGridCallback(os.path.join(output_path, "autoencoded-epoch-{:03d}.png"), autoencoder_sampler,
+    if(n_col==1):
+	autoencoder_cb = ImageGridCallback(os.path.join(output_path, "autoencoded-epoch-{:03d}.png"), autoencoder_sampler)
+    else:
+        autoencoder_cb = ImageGridCallback(os.path.join(output_path, "autoencoded-epoch-{:03d}.png"), autoencoder_sampler,
                                        cmap=None)
+
 
     # train network
     # generator, discriminator; pred, yfake, yreal
     n = xtrain.shape[0]
-    if(n_imgs == n):
-        print "Dataset loading : Success"
-    else:
-        print "Dataset loading : Failure"
+    #if(n_imgs == n):
+    #    print "Dataset loading : Success"
+    #else:
+    #    print "Dataset loading : Failure"
         # print "n_imgs e' "+str(n_imgs)
         # print "shape e' "+ str(xtrain.shape)
-        return
+    #    return
     y = [xtrain, np.ones((n, 1)), np.zeros((n, 1)), xtrain, np.zeros((n, 1)), np.ones((n, 1))]
     ntest = xtest.shape[0]
     ytest = [xtest, np.ones((ntest, 1)), np.zeros((ntest, 1)), xtest, np.zeros((ntest, 1)), np.ones((ntest, 1))]
@@ -201,14 +217,3 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     generator.save(os.path.join(output_path, "generator.h5"))
     discriminator.save(os.path.join(output_path, "discriminator.h5"))
 
-
-# def main():
-#     if(len(sys.argv)<3):
-#         print("Specify dataset's path and how many images you want to use for training")
-#         return
-#     else:
-#         aae(sys.argv[1], int(sys.argv[2]), "output/aae"+str(sys.argv[2])+"img-"+str(500)+"ep-"+str(64)+"batchsize")
-#
-#
-# if __name__ == "__main__":
-#     main()
