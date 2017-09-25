@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='adversarial_ae',
+    name='advae',
     version='1.0',
     author='Sara Brolli',
     author_email='',
@@ -22,7 +22,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'adversarial_ae = adversarialAE.cli_tool:initcli'
+            'advae = adversarialAE.cli_tool:initcli'
         ],
     },
 )
