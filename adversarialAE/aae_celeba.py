@@ -2,10 +2,10 @@ import matplotlib as mpl
 # This line allows mpl to run with no DISPLAY defined
 mpl.use('Agg')
 import sys
-from keras.layers import Reshape, Flatten, Lambda
-from keras.layers import Input
-from keras.layers.convolutional import UpSampling2D, MaxPooling2D
-from keras.models import Sequential, Model
+#from keras.layers import Reshape, Flatten, Lambda
+#from keras.layers import Input
+#from keras.layers.convolutional import UpSampling2D, MaxPooling2D
+#from keras.models import Sequential, Model
 from keras.optimizers import Adam
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #for tensorflow to work properly
@@ -15,95 +15,25 @@ import pandas as pd
 import numpy as np
 from keras_adversarial.image_grid_callback import ImageGridCallback
 from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D, BatchNormalization
-from keras.layers.core import SpatialDropout2D
+#from keras.layers.core import SpatialDropout2D
 from keras_adversarial import AdversarialModel, fix_names, n_choice
 from keras_adversarial import AdversarialOptimizerSimultaneous, normal_latent_sampling
-from keras.layers import LeakyReLU, Activation
+#from keras.layers import LeakyReLU, Activation
 from scipy import ndimage, misc
 
 from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
 from utils.data_utils import retrieve_data
-#from .nets import model_encoder, model_generator, model_generator
+from .nets import model_encoder, model_generator, model_generator
 import sklearn
 from sklearn import datasets
 
 
-def model_generator(latent_dim, n_cols=3, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=False):
-    model = Sequential(name="decoder")
-    h = 5
-    model.add(Dense(units * 4 * 4, input_dim=latent_dim, W_regularizer=reg()))
-    model.add(Reshape(dim_ordering_shape((units, 4, 4))))
-#    model.add(SpatialDropout2D(dropout))
-    model.add(LeakyReLU(0.2))
-    model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
-#    model.add(SpatialDropout2D(dropout))
-    model.add(LeakyReLU(0.2))
-    model.add(UpSampling2D(size=(2, 2)))
-    model.add(Convolution2D(units / 2, h, h, border_mode='same', W_regularizer=reg()))
-#    model.add(SpatialDropout2D(dropout))
-    model.add(LeakyReLU(0.2))
-    model.add(UpSampling2D(size=(2, 2)))
-    model.add(Convolution2D(units / 4, h, h, border_mode='same', W_regularizer=reg()))
-    model.add(LeakyReLU(0.2))
-    if not (dim_32):
-        model.add(UpSampling2D(size=(2, 2)))
-        model.add(Convolution2D(units / 8, h, h, border_mode='same', W_regularizer=reg()))
-        model.add(LeakyReLU(0.2))
-    model.add(UpSampling2D(size=(2, 2)))
-    model.add(Convolution2D(n_cols, h, h, border_mode='same', W_regularizer=reg()))
-    model.add(Activation('sigmoid'))
-    return model
-
-
-def model_encoder(latent_dim, input_shape, units=512, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dropout=0.5):
-    k = 5
-    x = Input(input_shape)
-    h = Convolution2D(units / 4, k, k, border_mode='same', W_regularizer=reg())(x)
-#    h = SpatialDropout2D(dropout)(h)
-    h = MaxPooling2D(pool_size=(2, 2))(h)
-    h = LeakyReLU(0.2)(h)
-    h = Convolution2D(units / 2, k, k, border_mode='same', W_regularizer=reg())(h)
-#    h = SpatialDropout2D(dropout)(h)
-    h = MaxPooling2D(pool_size=(2, 2))(h)
-    h = LeakyReLU(0.2)(h)
-    h = Convolution2D(units / 2, k, k, border_mode='same', W_regularizer=reg())(h)
-#    h = SpatialDropout2D(dropout)(h)
-    h = MaxPooling2D(pool_size=(2, 2))(h)
-    h = LeakyReLU(0.2)(h)
-    h = Convolution2D(units, k, k, border_mode='same', W_regularizer=reg())(h)
-#    h = SpatialDropout2D(dropout)(h)
-    h = LeakyReLU(0.2)(h)
-    h = Flatten()(h)
-    mu = Dense(latent_dim, name="encoder_mu", W_regularizer=reg())(h)
-    log_sigma_sq = Dense(latent_dim, name="encoder_log_sigma_sq", W_regularizer=reg())(h)
-    z = Lambda(lambda (_mu, _lss): _mu + K.random_normal(K.shape(_mu)) * K.exp(_lss / 2),
-               output_shape=lambda (_mu, _lss): _mu)([mu, log_sigma_sq])
-    return Model(x, z, name="encoder")
-
-
-def model_discriminator(latent_dim, output_dim=1, units=256, reg=lambda: l1l2(1e-7, 1e-7)):
-    z = Input((latent_dim,))
-    h = z
-#    mode = 1
-    h = Dense(units, name="discriminator_h1", W_regularizer=reg())(h)
-#    h = BatchNormalization(mode=mode)(h)
-    h = LeakyReLU(0.2)(h)
-    h = Dense(units / 2, name="discriminator_h2", W_regularizer=reg())(h)
-#    h = BatchNormalization(mode=mode)(h)
-    h = LeakyReLU(0.2)(h)
-    h = Dense(units / 2, name="discriminator_h3", W_regularizer=reg())(h)
-#    h = BatchNormalization(mode=mode)(h)
-    h = LeakyReLU(0.2)(h)
-    y = Dense(output_dim, name="discriminator_y", activation="sigmoid", W_regularizer=reg())(h)
-    return Model(z, y)
-
 def AAE(output_path, shape, latent_width, color_channels, batch,
         epoch, image_path, n_imgs, adversarial_optimizer):
-#def AAE(image_path, n_imgs, output_path, adversarial_optimizer):
-    # z \in R^256
+    # z in R^256
     latent_dim  = latent_width
     units       = 512
-    # x \in R^{3x64x64}
+    # x in R^{3x64x64}
     img_size    = shape
     n_col       = color_channels
     input_shape = dim_ordering_shape((n_col, img_size, img_size))
@@ -113,7 +43,7 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     generator = model_generator(latent_dim, n_col, units=units, dim_32=(img_size==32))
     # encoder (x ->z)
     encoder = model_encoder(latent_dim, input_shape, units=units)
-    # autoencoder (x -> x') --> unisce encoder e generator
+    # autoencoder (x -> x') --> join encoder e generator
     autoencoder = Model(encoder.inputs, generator(encoder(encoder.inputs)))
     # discriminator (z -> y)
     discriminator = model_discriminator(latent_dim, units=units)
@@ -153,13 +83,20 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
                               compile_kwargs={"loss_weights": {"yfake": 1e-1, "yreal": 1e-1, "xpred": 1e2}})
 
     # load data
-
-    #xtrain, xtest = retrieve_data(image_path, n_imgs, img_size)
-    data=sklearn.datasets.fetch_olivetti_faces(data_home=None, shuffle=False, random_state=0, download_if_missing=True)
-    data=data['images']
-    data=np.expand_dims(data, axis=3)
-    xtrain=data[:300]
-    xtest=data[300:]
+    if(image_path=='olivetti'):
+        data=sklearn.datasets.fetch_olivetti_faces(data_home=None, shuffle=False, random_state=0, download_if_missing=True)
+        data=data['images']
+        data=np.expand_dims(data, axis=3)
+        xtrain=data[:300]
+        xtest=data[300:]
+        n = xtrain.shape[0]
+    else:
+        xtrain, xtest = retrieve_data(image_path, n_imgs, img_size)
+        n = xtrain.shape[0]
+        if(n_imgs == n):
+           print "Dataset loading : Success"
+        else:
+           print "Dataset loading : Failure"
 
     # callback for image grid of generated samples
     def generator_sampler():
@@ -190,16 +127,6 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
                                        cmap=None)
 
 
-    # train network
-    # generator, discriminator; pred, yfake, yreal
-    n = xtrain.shape[0]
-    #if(n_imgs == n):
-    #    print "Dataset loading : Success"
-    #else:
-    #    print "Dataset loading : Failure"
-        # print "n_imgs e' "+str(n_imgs)
-        # print "shape e' "+ str(xtrain.shape)
-    #    return
     y = [xtrain, np.ones((n, 1)), np.zeros((n, 1)), xtrain, np.zeros((n, 1)), np.ones((n, 1))]
     ntest = xtest.shape[0]
     ytest = [xtest, np.ones((ntest, 1)), np.zeros((ntest, 1)), xtest, np.zeros((ntest, 1)), np.ones((ntest, 1))]
@@ -216,4 +143,3 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     encoder.save(os.path.join(output_path, "encoder.h5"))
     generator.save(os.path.join(output_path, "generator.h5"))
     discriminator.save(os.path.join(output_path, "discriminator.h5"))
-

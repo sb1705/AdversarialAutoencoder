@@ -17,7 +17,7 @@ import click
               help="Number of images per training batch.")
 @click.option('--epoch', default=200, type=int,
               help="Number of epochs to train.")
-@click.argument('image-path', type=click.Path(resolve_path=False,
+@click.argument('image-path', default='olivetti' type=click.Path(resolve_path=False,
                                               file_okay=False, dir_okay=True))
 @click.argument('n_imgs', default=500)
 def train(output_path, shape, latent_width, color_channels, batch,
@@ -25,7 +25,7 @@ def train(output_path, shape, latent_width, color_channels, batch,
     '''Train an adversarial autoencoder on images'''
     if not ((shape==32)or(shape==64)):
 	print "Images' shape must be 32 or 64"
-	return 
+	return
     if not os.path.exists(os.path.dirname(image_path)):
         click.echo("Image path doesn't exist.")
         return
@@ -36,7 +36,7 @@ def train(output_path, shape, latent_width, color_channels, batch,
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
-  
+
     file = open(output_path+'summary.txt','w')
     file.write('dataset: ' + image_path+'\n')
     file.write('number of images: '+str(n_imgs)+'\n')
@@ -58,9 +58,20 @@ def train(output_path, shape, latent_width, color_channels, batch,
 
 
 @click.command()
-def generate():
-    """Generate images from previously trained model"""
-    print "Per ora non faccio niente :)"
+@click.argument('path', type=click.Path(resolve_path=False,
+                                              file_okay=False, dir_okay=True))
+@click.option('out-path', default='', type=click.Path(resolve_path=False,
+                                              file_okay=False, dir_okay=True))
+def generate(path, out_path):
+    """Generate 100 images from previously trained model"""
+    if(out_path==''):
+        out_path=str(path)+'/generated/'
+    generator = load_model(os.path.join(path, "generator.h5"))
+    out=generator.layers[-1]
+    n_col=out.output_shape[3]
+    zsamples = np.random.normal(size=(10 * 10, latent_dim))
+    imgs=dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, img_size, img_size, n_col))
+    ImageGridCallback(os.path.join(out_path, "generated.png"), imgs)
     return
     # def generator_sampler():
     #     zsamples = np.random.normal(size=(10 * 10, latent_dim))
