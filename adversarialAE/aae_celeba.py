@@ -5,11 +5,11 @@ import sys
 #from keras.layers import Reshape, Flatten, Lambda
 #from keras.layers import Input
 #from keras.layers.convolutional import UpSampling2D, MaxPooling2D
-#from keras.models import Sequential, Model
+from keras.models import Model
 from keras.optimizers import Adam
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #for tensorflow to work properly
-import keras.backend as K
+#import keras.backend as K
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -23,7 +23,7 @@ from scipy import ndimage, misc
 
 from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
 from utils.data_utils import retrieve_data
-from .nets import model_encoder, model_generator, model_generator
+from .nets import model_encoder, model_generator, model_discriminator
 import sklearn
 from sklearn import datasets
 

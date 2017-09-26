@@ -1,3 +1,4 @@
+import keras.backend as K
 from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D, BatchNormalization
 #from keras.layers.core import SpatialDropout2D
 from keras_adversarial import AdversarialModel, fix_names, n_choice
@@ -6,7 +7,7 @@ from keras.layers import Input
 from keras.layers.convolutional import UpSampling2D, MaxPooling2D
 from keras.layers import LeakyReLU, Activation
 from keras.models import Sequential, Model
-
+from utils.image_utils import dim_ordering_shape
 def model_generator(latent_dim, n_cols=3, units=512, dropout=0.5, reg=lambda: l1l2(l1=1e-7, l2=1e-7), dim_32=False):
     model = Sequential(name="decoder")
     h = 5
