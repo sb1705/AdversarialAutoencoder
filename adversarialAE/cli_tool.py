@@ -6,7 +6,8 @@ import click
 
 @click.command()
 @click.option('--output-path', default='', type=click.Path(resolve_path=False,
-                                              file_okay=False, dir_okay=True))
+              file_okay=False, dir_okay=True), 
+              help='Output directory.')
 @click.option('--shape', default=64, type = int,
               help='shape = image width = image_height. The possible values are 32 and 64. For example with shape=32 the images used for training will be (32, 32, number_of_colors)')
 @click.option('--latent-width', default=256, type=int,
