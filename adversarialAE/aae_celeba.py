@@ -2,9 +2,6 @@ import matplotlib as mpl
 # This line allows mpl to run with no DISPLAY defined
 mpl.use('Agg')
 import sys
-#from keras.layers import Reshape, Flatten, Lambda
-#from keras.layers import Input
-#from keras.layers.convolutional import UpSampling2D, MaxPooling2D
 from keras.models import Model
 from keras.optimizers import Adam
 import os
@@ -15,10 +12,8 @@ import pandas as pd
 import numpy as np
 from keras_adversarial.image_grid_callback import ImageGridCallback
 from keras_adversarial.legacy import l1l2, Dense, fit, Convolution2D, BatchNormalization
-#from keras.layers.core import SpatialDropout2D
 from keras_adversarial import AdversarialModel, fix_names, n_choice
 from keras_adversarial import AdversarialOptimizerSimultaneous, normal_latent_sampling
-#from keras.layers import LeakyReLU, Activation
 from scipy import ndimage, misc
 
 from utils.image_utils import dim_ordering_unfix, dim_ordering_shape
@@ -37,8 +32,6 @@ def AAE(output_path, shape, latent_width, color_channels, batch,
     img_size    = shape
     n_col       = color_channels
     input_shape = dim_ordering_shape((n_col, img_size, img_size))
-    print("input shape:")
-    print input_shape
     # generator (z -> x)
     generator = model_generator(latent_dim, n_col, units=units, dim_32=(img_size==32))
     # encoder (x ->z)

@@ -14,7 +14,7 @@ import click
               file_okay=False, dir_okay=True), 
               help='Output directory.')
 @click.option('--shape', default=64, type = int,
-              help='shape = image width = image_height. The possible values are 32 and 64. For example with shape=32 the images used for training will be (32, 32, number_of_colors)')
+              help='shape = image width = image_height. The possible values are 32 and 64. For example with shape 32 the images used for training will be resized to (32, 32, number_of_colors)')
 @click.option('--latent-width', default=256, type=int,
               help="Width of the latent space.")
 @click.option('--color-channels', default=3, type=int,
@@ -25,10 +25,12 @@ import click
               help="Number of epochs to train.")
 @click.argument('image-path', default='olivetti', type=click.Path(resolve_path=False,
                                               file_okay=False, dir_okay=True))
-@click.argument('n_imgs', default=500)
+@click.argument('n_imgs', default=300)
 def train(output_path, shape, latent_width, color_channels, batch,
           epoch, image_path, n_imgs):
-    '''Train an adversarial autoencoder on images'''
+    '''Train an adversarial autoencoder on images. 
+	IMAGE_PATH is the path where the dataset to use is located. If omitted, "The Database of Faces" of AT&T will be used.
+	N_IMGS is the number of images to use for the training. The default is 300.'''
     if not ((shape==32)or(shape==64)):
 	print "Images' shape must be 32 or 64"
 	return
@@ -69,11 +71,12 @@ def train(output_path, shape, latent_width, color_channels, batch,
 
 @click.command()
 @click.option('--output-path', default='', type=click.Path(resolve_path=False,
-                                              file_okay=False, dir_okay=True))
-@click.argument('path', type=click.Path(resolve_path=False,
+                                              file_okay=False, dir_okay=True),
+              help='Output directory.')
+@click.argument('model-path', type=click.Path(resolve_path=False,
                                               file_okay=False, dir_okay=True))
 def generate(path, output_path):
-    """Generate 100 images from previously trained model"""
+    """Generate 100 images from previously trained model. MODEL_PATH is the directory where the model to use is located."""
     if not path[-1] == '/':
         path += '/'
     if(output_path==''):

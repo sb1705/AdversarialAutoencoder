@@ -49,7 +49,7 @@ def model_encoder(latent_dim, input_shape, units=512, reg=lambda: l1l2(l1=1e-7, 
     h = Flatten()(h)
     mu = Dense(latent_dim, name="encoder_mu", W_regularizer=reg())(h)
     log_sigma_sq = Dense(latent_dim, name="encoder_log_sigma_sq", W_regularizer=reg())(h)
-    z = Lambda(lambda (_mu, _lss): _mu + K.random_normal(K.shape(_mu)) * K.exp(_lss / 2),
+    z = Lambda(lambda (_mu, _lss): _mu + K.random_normal(K.shape(_mu)) * _lss,
                output_shape=lambda (_mu, _lss): _mu)([mu, log_sigma_sq])
     return Model(x, z, name="encoder")
 
