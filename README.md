@@ -7,7 +7,7 @@ Click (http://click.pocoo.org/5/) has been used for the command line support.
 
 # Setup
 
-For installing advae and it's dependencies, simply run:
+For installing advae and its dependencies, simply run:
 ```
 python setup.py install
 ```
